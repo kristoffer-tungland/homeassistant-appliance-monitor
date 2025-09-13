@@ -1,0 +1,16 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Appliance",
+        "description": "Configure an appliance",
+        "data": {
+          "name": "Name",
+          "appliance_type": "Appliance type",
+          "power_sensor": "Power sensor",
+          "door_sensor": "Door sensor"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "domain": "appliance_cycle",
+  "name": "Appliance Cycle",
+  "version": "0.1.0",
+  "documentation": "https://github.com/example/homeassistant-appliance-monitor",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": ["@openai-labs"],
+  "config_flow": true,
+  "iot_class": "local_push"
+}
