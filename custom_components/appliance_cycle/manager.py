@@ -42,6 +42,8 @@ class ApplianceCycleManager:
         self.started_at: datetime | None = None
         self.finished_at: datetime | None = None
         self.last_runtime: float | None = None
+        self.door_is_open: bool | None = None
+        self.door_last_opened: datetime | None = None
 
         self._on_timer = None
         self._off_timer = None
@@ -60,6 +62,11 @@ class ApplianceCycleManager:
             self._door_unsub = async_track_state_change_event(
                 self.hass, [self.door_entity], self._door_changed
             )
+            door_state = self.hass.states.get(self.door_entity)
+            if door_state and door_state.state not in ("unknown", "unavailable"):
+                self.door_is_open = door_state.state == STATE_ON
+                if self.door_is_open:
+                    self.door_last_opened = door_state.last_changed
         self._ticker_unsub = async_track_time_interval(
             self.hass, self._handle_tick, timedelta(seconds=60)
         )
@@ -114,11 +121,16 @@ class ApplianceCycleManager:
 
     @callback
     def _door_changed(self, event: Event) -> None:
-        if self.state != "finished":
-            return
         new_state: State | None = event.data.get("new_state")
-        if new_state and new_state.state == STATE_ON:
-            self._reset_cycle()
+        if new_state is None or new_state.state in ("unknown", "unavailable"):
+            return
+        is_open = new_state.state == STATE_ON
+        self.door_is_open = is_open
+        if is_open:
+            self.door_last_opened = utcnow()
+            if self.state == "finished":
+                self._reset_cycle()
+        self._schedule_update()
 
     @callback
     def _confirm_running(self, _now: datetime) -> None:
@@ -190,4 +202,14 @@ class ApplianceCycleManager:
     def finished_at_iso(self) -> str | None:
         if self.finished_at:
             return self.finished_at.isoformat()
+        return None
+
+    @property
+    def door_open(self) -> bool | None:
+        return self.door_is_open
+
+    @property
+    def door_last_opened_iso(self) -> str | None:
+        if self.door_last_opened:
+            return self.door_last_opened.isoformat()
         return None
