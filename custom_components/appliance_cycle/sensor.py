@@ -4,11 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.const import (
-    DEVICE_CLASS_DURATION,
-    DEVICE_CLASS_TIMESTAMP,
-)
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from . import _get_entry_data
@@ -42,7 +38,7 @@ class ApplianceBaseSensor(SensorEntity):
 
 class ApplianceRunTimeSensor(ApplianceBaseSensor):
     _attr_native_unit_of_measurement = "s"
-    _attr_device_class = DEVICE_CLASS_DURATION
+    _attr_device_class = SensorDeviceClass.DURATION
 
     def __init__(self, manager) -> None:
         super().__init__(manager)
@@ -56,7 +52,7 @@ class ApplianceRunTimeSensor(ApplianceBaseSensor):
 
 class ApplianceLastRuntimeSensor(ApplianceBaseSensor):
     _attr_native_unit_of_measurement = "s"
-    _attr_device_class = DEVICE_CLASS_DURATION
+    _attr_device_class = SensorDeviceClass.DURATION
 
     def __init__(self, manager) -> None:
         super().__init__(manager)
@@ -69,7 +65,7 @@ class ApplianceLastRuntimeSensor(ApplianceBaseSensor):
 
 
 class ApplianceFinishedAtSensor(ApplianceBaseSensor):
-    _attr_device_class = DEVICE_CLASS_TIMESTAMP
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
 
     def __init__(self, manager) -> None:
         super().__init__(manager)
