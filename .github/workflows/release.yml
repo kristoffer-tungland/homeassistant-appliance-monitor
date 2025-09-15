@@ -5,20 +5,22 @@ on:
     branches: [ main ]
     types: [ closed ]
 
+# Ensure the workflow can push commits and create releases
 permissions:
-  contents: write   # <-- lets this job push & create releases
+  contents: write
 
 jobs:
   release:
     if: github.actor != 'github-actions[bot]' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.base.ref }}
-          persist-credentials: false   # <-- we’ll provide our own token
+          persist-credentials: false
 
       - name: Determine next version
         id: next_version
@@ -30,17 +32,26 @@ jobs:
             try {
               latestRelease = await github.rest.repos.getLatestRelease({ owner, repo });
             } catch (error) {
-              if (error.status === 404) latestRelease = null; else throw error;
+              if (error.status === 404) {
+                latestRelease = null;
+              } else {
+                throw error;
+              }
             }
+
             let newTag;
-            if (!latestRelease) newTag = 'v0.0.1';
-            else {
+            if (!latestRelease) {
+              newTag = 'v0.0.1';
+            } else {
               const tag = latestRelease.data.tag_name;
-              const m = tag && tag.match(/^v(\d+)\.(\d+)\.(\d+)$/);
-              if (!m) throw new Error(`Latest release tag ${tag} not in v0.0.1 format.`);
-              const [major, minor, patch] = m.slice(1).map(Number);
+              const match = tag && tag.match(/^v(\d+)\.(\d+)\.(\d+)$/);
+              if (!match) {
+                throw new Error(`Latest release tag ${tag} is not in the expected v0.0.1 format.`);
+              }
+              const [major, minor, patch] = match.slice(1).map(Number);
               newTag = `v${major}.${minor}.${patch + 1}`;
             }
+
             core.setOutput('tag', newTag);
             core.setOutput('version', newTag.slice(1));
 
@@ -74,15 +85,17 @@ jobs:
           git remote set-url origin \
             https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
 
-          # In pull_request_target, the base branch is what you want to update
+          # Push to the base branch (main) that the PR targeted
           git push origin HEAD:${{ github.event.pull_request.base.ref }}
 
-      - name: Create release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create release (auto notes)
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.next_version.outputs.tag }}
-          release_name: ${{ steps.next_version.outputs.tag }}
+          name: ${{ steps.next_version.outputs.tag }}
           target_commitish: ${{ github.event.pull_request.merge_commit_sha }}
           generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
