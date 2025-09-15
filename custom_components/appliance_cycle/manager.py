@@ -88,14 +88,31 @@ class ApplianceCycleManager:
     def _schedule_update(self) -> None:
         async_dispatcher_send(self.hass, self.update_signal)
 
+    @staticmethod
+    def _power_to_w(state: State) -> float | None:
+        """Return power in watts from a state object."""
+        try:
+            power = float(state.state)
+        except (ValueError, TypeError):
+            return None
+        unit = state.attributes.get("unit_of_measurement")
+        if isinstance(unit, str):
+            unit = unit.lower()
+            if unit == "kw":
+                power *= 1000
+            elif unit == "mw":
+                power *= 1_000_000
+            elif unit == "gw":
+                power *= 1_000_000_000
+        return power
+
     @callback
     def _power_changed(self, event: Event) -> None:
         new_state: State | None = event.data.get("new_state")
         if new_state is None or new_state.state in ("unknown", "unavailable"):
             return
-        try:
-            power = float(new_state.state)
-        except (ValueError, TypeError):
+        power = self._power_to_w(new_state)
+        if power is None:
             return
 
         if self.state == "idle" and power >= self.profile["on_threshold"]:
@@ -138,11 +155,8 @@ class ApplianceCycleManager:
         power_state = self.hass.states.get(self.power_entity)
         if not power_state:
             return
-        try:
-            power = float(power_state.state)
-        except (ValueError, TypeError):
-            return
-        if power < self.profile["on_threshold"]:
+        power = self._power_to_w(power_state)
+        if power is None or power < self.profile["on_threshold"]:
             return
         self.state = "running"
         self.started_at = utcnow()
@@ -154,11 +168,8 @@ class ApplianceCycleManager:
         power_state = self.hass.states.get(self.power_entity)
         if not power_state:
             return
-        try:
-            power = float(power_state.state)
-        except (ValueError, TypeError):
-            return
-        if power > self.profile["off_threshold"]:
+        power = self._power_to_w(power_state)
+        if power is None or power > self.profile["off_threshold"]:
             return
         if self.started_at is None:
             return
