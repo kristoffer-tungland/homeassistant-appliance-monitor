@@ -207,6 +207,10 @@ class ApplianceCycleManager:
     def _handle_tick(self, now: datetime) -> None:
         if self.state == "running":
             self._schedule_update()
+        elif self.finished_at and (
+            not self.door_last_opened or self.door_last_opened < self.finished_at
+        ):
+            self._schedule_update()
 
     @callback
     def _reset_cycle(self, *_args) -> None:
@@ -240,3 +244,11 @@ class ApplianceCycleManager:
         if self.door_last_opened:
             return self.door_last_opened.isoformat()
         return None
+
+    @property
+    def time_since_finished_seconds(self) -> float:
+        if not self.finished_at:
+            return 0.0
+        if self.door_last_opened and self.door_last_opened >= self.finished_at:
+            return 0.0
+        return (utcnow() - self.finished_at).total_seconds()

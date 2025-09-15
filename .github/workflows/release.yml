@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  release:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine next version
+        id: next_version
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            let latestRelease;
+            try {
+              latestRelease = await github.rest.repos.getLatestRelease({ owner, repo });
+            } catch (error) {
+              if (error.status === 404) {
+                latestRelease = null;
+              } else {
+                throw error;
+              }
+            }
+
+            let newTag;
+            if (!latestRelease) {
+              newTag = 'v0.0.1';
+            } else {
+              const tag = latestRelease.data.tag_name;
+              const match = tag && tag.match(/^v(\d+)\.(\d+)\.(\d+)$/);
+              if (!match) {
+                throw new Error(`Latest release tag ${tag} is not in the expected v0.0.1 format.`);
+              }
+              const [major, minor, patch] = match.slice(1).map(Number);
+              newTag = `v${major}.${minor}.${patch + 1}`;
+            }
+
+            core.setOutput('tag', newTag);
+            core.setOutput('version', newTag.slice(1));
+
+      - name: Update manifest version
+        run: |
+          python <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest_path = Path('custom_components/appliance_cycle/manifest.json')
+          data = json.loads(manifest_path.read_text())
+          data['version'] = '${{ steps.next_version.outputs.version }}'
+          manifest_path.write_text(json.dumps(data, indent=2) + '\n')
+          PY
+
+      - name: Commit manifest update
+        env:
+          VERSION: ${{ steps.next_version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add custom_components/appliance_cycle/manifest.json
+          if git diff --cached --quiet; then
+            echo "No manifest changes to commit."
+          else
+            git commit -m "chore: bump manifest version to ${VERSION}"
+            git push
+          fi
+
+      - name: Create release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.next_version.outputs.tag }}
+          release_name: ${{ steps.next_version.outputs.tag }}
+          target_commitish: master
+          generate_release_notes: true
