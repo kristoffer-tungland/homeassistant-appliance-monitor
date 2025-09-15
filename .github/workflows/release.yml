@@ -66,6 +66,7 @@ jobs:
       - name: Commit manifest update
         env:
           VERSION: ${{ steps.next_version.outputs.version }}
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -74,7 +75,7 @@ jobs:
             echo "No manifest changes to commit."
           else
             git commit -m "chore: bump manifest version to ${VERSION}"
-            git push
+            git push https://x-access-token:${GH_PAT}@github.com/${GITHUB_REPOSITORY}.git HEAD:${GITHUB_REF#refs/heads/}
           fi
 
       - name: Create release
