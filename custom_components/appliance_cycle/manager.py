@@ -12,6 +12,7 @@ from homeassistant.helpers.event import (
     async_track_time_interval,
 )
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.util.dt import utcnow
 
 from .const import (
@@ -52,6 +53,12 @@ class ApplianceCycleManager:
         self._door_unsub = None
 
         self.update_signal = f"{DOMAIN}_{entry.entry_id}_update"
+        self._device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=self.name,
+            manufacturer="Appliance Cycle",
+            model=self.appliance_type.title(),
+        )
 
     async def async_setup(self) -> None:
         """Set up listeners."""
@@ -252,3 +259,7 @@ class ApplianceCycleManager:
         if self.door_last_opened and self.door_last_opened >= self.finished_at:
             return 0.0
         return (utcnow() - self.finished_at).total_seconds()
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return self._device_info

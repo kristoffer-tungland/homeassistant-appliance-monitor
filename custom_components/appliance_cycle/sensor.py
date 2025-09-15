@@ -25,6 +25,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class ApplianceBaseSensor(SensorEntity):
     def __init__(self, manager) -> None:
         self.manager = manager
+        self._attr_device_info = manager.device_info
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()

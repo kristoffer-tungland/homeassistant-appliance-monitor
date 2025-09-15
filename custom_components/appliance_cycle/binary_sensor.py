@@ -19,14 +19,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
     async_add_entities(sensors)
 
 
-class ApplianceRunningBinarySensor(BinarySensorEntity):
-    """Indicates if the appliance is running."""
-
+class ApplianceBaseBinarySensor(BinarySensorEntity):
     def __init__(self, manager) -> None:
         self.manager = manager
-        self._attr_name = f"{manager.name} Running"
-        self._attr_unique_id = f"{manager.entry.entry_id}_running"
-        self._attr_device_class = BinarySensorDeviceClass.RUNNING
+        self._attr_device_info = manager.device_info
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -37,6 +33,16 @@ class ApplianceRunningBinarySensor(BinarySensorEntity):
                 self.async_write_ha_state,
             )
         )
+
+
+class ApplianceRunningBinarySensor(ApplianceBaseBinarySensor):
+    """Indicates if the appliance is running."""
+
+    def __init__(self, manager) -> None:
+        super().__init__(manager)
+        self._attr_name = f"{manager.name} Running"
+        self._attr_unique_id = f"{manager.entry.entry_id}_running"
+        self._attr_device_class = BinarySensorDeviceClass.RUNNING
 
     @property
     def is_on(self) -> bool:
@@ -61,24 +67,14 @@ class ApplianceRunningBinarySensor(BinarySensorEntity):
         }
 
 
-class ApplianceDoorBinarySensor(BinarySensorEntity):
+class ApplianceDoorBinarySensor(ApplianceBaseBinarySensor):
     """Indicates if the appliance door is open."""
 
     def __init__(self, manager) -> None:
-        self.manager = manager
+        super().__init__(manager)
         self._attr_name = f"{manager.name} Door"
         self._attr_unique_id = f"{manager.entry.entry_id}_door"
         self._attr_device_class = BinarySensorDeviceClass.DOOR
-
-    async def async_added_to_hass(self) -> None:
-        await super().async_added_to_hass()
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass,
-                self.manager.update_signal,
-                self.async_write_ha_state,
-            )
-        )
 
     @property
     def is_on(self) -> bool:
