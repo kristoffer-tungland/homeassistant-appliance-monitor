@@ -1,7 +1,7 @@
 {
   "domain": "appliance_cycle",
   "name": "Appliance Cycle",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "documentation": "https://github.com/example/homeassistant-appliance-monitor",
   "requirements": [],
   "dependencies": [],
