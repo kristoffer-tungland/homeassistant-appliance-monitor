@@ -32,6 +32,7 @@ Default detection thresholds are applied for each appliance type and can be adju
 * `sensor.<name>_run_time`
 * `sensor.<name>_last_runtime`
 * `sensor.<name>_finished_at`
+* `sensor.<name>_time_since_finished`
 * `sensor.<name>_status`
 
 ## Development

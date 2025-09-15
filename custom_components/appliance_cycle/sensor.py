@@ -16,6 +16,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         ApplianceRunTimeSensor(manager),
         ApplianceLastRuntimeSensor(manager),
         ApplianceFinishedAtSensor(manager),
+        ApplianceTimeSinceFinishedSensor(manager),
         ApplianceStatusSensor(manager),
     ]
     async_add_entities(sensors)
@@ -77,6 +78,20 @@ class ApplianceFinishedAtSensor(ApplianceBaseSensor):
         if self.manager.finished_at_iso:
             return datetime.fromisoformat(self.manager.finished_at_iso)
         return None
+
+
+class ApplianceTimeSinceFinishedSensor(ApplianceBaseSensor):
+    _attr_native_unit_of_measurement = "s"
+    _attr_device_class = SensorDeviceClass.DURATION
+
+    def __init__(self, manager) -> None:
+        super().__init__(manager)
+        self._attr_name = f"{manager.name} Time Since Finished"
+        self._attr_unique_id = f"{manager.entry.entry_id}_time_since_finished"
+
+    @property
+    def native_value(self):
+        return int(self.manager.time_since_finished_seconds)
 
 
 class ApplianceStatusSensor(ApplianceBaseSensor):
