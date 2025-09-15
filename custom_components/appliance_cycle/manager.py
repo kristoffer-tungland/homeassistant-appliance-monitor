@@ -145,7 +145,23 @@ class ApplianceCycleManager:
         self.door_is_open = is_open
         if is_open:
             self.door_last_opened = utcnow()
-            if self.state == "finished":
+            if self.state == "running":
+                if self._off_timer:
+                    self._off_timer()
+                    self._off_timer = None
+                if self.started_at:
+                    runtime = (utcnow() - self.started_at).total_seconds()
+                    if runtime < self.profile["min_run"]:
+                        self._reset_cycle()
+                        self._schedule_update()
+                        return
+                    self.last_runtime = runtime
+                self.state = "finished"
+                self.finished_at = utcnow()
+                async_call_later(
+                    self.hass, self.profile["resume_grace"], self._reset_cycle
+                )
+            elif self.state == "finished":
                 self._reset_cycle()
         self._schedule_update()
 
