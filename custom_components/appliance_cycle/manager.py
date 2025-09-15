@@ -174,6 +174,7 @@ class ApplianceCycleManager:
         power = self._power_to_w(power_state)
         if power is None or power < self.profile["on_threshold"]:
             return
+        self.finished_at = None
         self.state = "running"
         self.started_at = utcnow()
         self._schedule_update()
@@ -211,7 +212,6 @@ class ApplianceCycleManager:
     def _reset_cycle(self, *_args) -> None:
         self.state = "idle"
         self.started_at = None
-        self.finished_at = None
         self._schedule_update()
 
     # Properties used by entities

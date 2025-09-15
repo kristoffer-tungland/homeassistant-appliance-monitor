@@ -88,6 +88,8 @@ class ApplianceStatusSensor(ApplianceBaseSensor):
     @property
     def native_value(self):
         state = self.manager.state
+        if self.manager.door_open:
+            return "Open"
         if state == "running":
             seconds = int(self.manager.run_time_seconds)
             mins, secs = divmod(seconds, 60)
@@ -95,6 +97,6 @@ class ApplianceStatusSensor(ApplianceBaseSensor):
             if hours:
                 return f"{hours}h {mins:02d}m"
             return f"{mins}m"
-        if state == "finished" and self.manager.finished_at:
-            return self.manager.finished_at.strftime("Finished at %H:%M")
+        if state == "finished":
+            return "Finished"
         return "Idle"
