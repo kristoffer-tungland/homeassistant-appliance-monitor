@@ -70,10 +70,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             {
                 vol.Required(
                     "on_threshold", default=profile.get("on_threshold")
-                ): float,
+                ): vol.Coerce(float),
                 vol.Required(
                     "off_threshold", default=profile.get("off_threshold")
-                ): float,
+                ): vol.Coerce(float),
                 vol.Required("delay_on", default=profile.get("delay_on")): int,
                 vol.Required(
                     "delay_off", default=profile.get("delay_off")
