@@ -1,19 +1,22 @@
 name: Release
 
 on:
-  push:
+  pull_request_target:
     branches:
-      - master
+      - main
+    types:
+      - closed
 
 jobs:
   release:
-    if: github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.base.ref }}
 
       - name: Determine next version
         id: next_version
@@ -81,5 +84,5 @@ jobs:
         with:
           tag_name: ${{ steps.next_version.outputs.tag }}
           release_name: ${{ steps.next_version.outputs.tag }}
-          target_commitish: master
+          target_commitish: ${{ github.event.pull_request.merge_commit_sha }}
           generate_release_notes: true
