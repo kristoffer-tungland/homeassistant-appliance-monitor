@@ -19,6 +19,7 @@ DEFAULT_PROFILES = {
         "quiet_end": 120,
         "min_run": 300,
         "resume_grace": 180,
+        "start_grace": 30,
     },
     "dryer": {
         "on_threshold": 80.0,
@@ -28,6 +29,7 @@ DEFAULT_PROFILES = {
         "quiet_end": 90,
         "min_run": 240,
         "resume_grace": 180,
+        "start_grace": 30,
     },
     "dishwasher": {
         "on_threshold": 20.0,
@@ -37,5 +39,6 @@ DEFAULT_PROFILES = {
         "quiet_end": 180,
         "min_run": 600,
         "resume_grace": 240,
+        "start_grace": 45,
     },
 }

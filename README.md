@@ -26,6 +26,13 @@ Use the Home Assistant UI to add **Appliance Cycle** from the integration menu. 
 
 Default detection thresholds are applied for each appliance type and can be adjusted later in the integration options.
 
+### Options
+
+All detection thresholds and timings can be tuned from the integration options dialog:
+
+* **Delay on / Delay off / Quiet end / Minimum run / Resume grace** – control how long the integration waits to confirm that an appliance has started or finished.
+* **Start grace** – number of seconds that brief dips below the on-threshold are ignored while confirming a start, helping catch appliances that momentarily idle before the cycle fully begins.
+
 ## Provided Entities
 
 * `binary_sensor.<name>_running`
