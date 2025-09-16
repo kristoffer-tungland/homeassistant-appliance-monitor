@@ -35,9 +35,14 @@ class ApplianceCycleManager:
         self.appliance_type: str = data[CONF_APPLIANCE_TYPE]
         self.power_entity: str = data[CONF_POWER_SENSOR]
         self.door_entity: str | None = data.get(CONF_DOOR_SENSOR)
-        self.profile = data.get(
-            "profile", DEFAULT_PROFILES[self.appliance_type]
-        )
+        defaults = DEFAULT_PROFILES[self.appliance_type].copy()
+        stored_profile = data.get("profile")
+        if isinstance(stored_profile, dict):
+            for key, value in defaults.items():
+                stored_profile.setdefault(key, value)
+            self.profile = stored_profile
+        else:
+            self.profile = defaults
 
         self.state: str = "idle"
         self.started_at: datetime | None = None
@@ -48,6 +53,7 @@ class ApplianceCycleManager:
 
         self._on_timer = None
         self._off_timer = None
+        self._on_grace_timer = None
         self._ticker_unsub = None
         self._power_unsub = None
         self._door_unsub = None
@@ -86,14 +92,32 @@ class ApplianceCycleManager:
             self._door_unsub()
         if self._ticker_unsub:
             self._ticker_unsub()
-        if self._on_timer:
-            self._on_timer()
+        self._cancel_on_timer()
+        self._cancel_on_grace_timer()
         if self._off_timer:
             self._off_timer()
 
     @callback
     def _schedule_update(self) -> None:
         async_dispatcher_send(self.hass, self.update_signal)
+
+    def _cancel_on_timer(self) -> None:
+        if self._on_timer:
+            cancel = self._on_timer
+            self._on_timer = None
+            cancel()
+
+    def _cancel_on_grace_timer(self, *, from_callback: bool = False) -> None:
+        if self._on_grace_timer:
+            cancel = self._on_grace_timer
+            self._on_grace_timer = None
+            if not from_callback:
+                cancel()
+
+    @callback
+    def _cancel_start_candidate(self, *_args) -> None:
+        self._cancel_on_grace_timer(from_callback=bool(_args))
+        self._cancel_on_timer()
 
     @staticmethod
     def _power_to_w(state: State) -> float | None:
@@ -122,15 +146,26 @@ class ApplianceCycleManager:
         if power is None:
             return
 
-        if self.state == "idle" and power >= self.profile["on_threshold"]:
-            if not self._on_timer:
-                self._on_timer = async_call_later(
-                    self.hass, self.profile["delay_on"], self._confirm_running
-                )
-        else:
-            if self._on_timer and power < self.profile["on_threshold"]:
-                self._on_timer()
-                self._on_timer = None
+        if self.state == "idle":
+            on_threshold = self.profile["on_threshold"]
+            if power >= on_threshold:
+                if self._on_grace_timer:
+                    self._cancel_on_grace_timer()
+                if not self._on_timer:
+                    self._on_timer = async_call_later(
+                        self.hass, self.profile["delay_on"], self._confirm_running
+                    )
+            elif self._on_timer:
+                start_grace = self.profile.get("start_grace", 0)
+                if start_grace > 0:
+                    if not self._on_grace_timer:
+                        self._on_grace_timer = async_call_later(
+                            self.hass,
+                            start_grace,
+                            self._cancel_start_candidate,
+                        )
+                else:
+                    self._cancel_start_candidate()
 
         if self.state == "running" and power <= self.profile["off_threshold"]:
             if not self._off_timer:
@@ -175,6 +210,7 @@ class ApplianceCycleManager:
     @callback
     def _confirm_running(self, _now: datetime) -> None:
         self._on_timer = None
+        self._cancel_on_grace_timer()
         power_state = self.hass.states.get(self.power_entity)
         if not power_state:
             return
@@ -221,6 +257,7 @@ class ApplianceCycleManager:
 
     @callback
     def _reset_cycle(self, *_args) -> None:
+        self._cancel_start_candidate()
         self.state = "idle"
         self.started_at = None
         self._schedule_update()

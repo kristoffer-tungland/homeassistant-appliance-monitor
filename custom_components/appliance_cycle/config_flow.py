@@ -65,7 +65,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             self.config_entry.data["profile"].update(user_input)
             return self.async_create_entry(title="", data={})
-        profile = self.config_entry.data.get("profile", {})
+        profile = DEFAULT_PROFILES[
+            self.config_entry.data[CONF_APPLIANCE_TYPE]
+        ].copy()
+        profile.update(self.config_entry.data.get("profile", {}))
         schema = vol.Schema(
             {
                 vol.Required(
@@ -75,6 +78,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     "off_threshold", default=profile.get("off_threshold")
                 ): vol.Coerce(float),
                 vol.Required("delay_on", default=profile.get("delay_on")): int,
+                vol.Required(
+                    "start_grace", default=profile.get("start_grace", 0)
+                ): int,
                 vol.Required(
                     "delay_off", default=profile.get("delay_off")
                 ): int,
