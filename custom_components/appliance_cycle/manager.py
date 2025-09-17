@@ -57,6 +57,11 @@ class ApplianceCycleManager:
         self._ticker_unsub = None
         self._power_unsub = None
         self._door_unsub = None
+        self._last_power: float | None = None
+        self._start_candidate_started: datetime | None = None
+        self._start_candidate_accounted_until: datetime | None = None
+        self._start_candidate_high_duration: float = 0.0
+        self._start_candidate_below_duration: float = 0.0
 
         self.update_signal = f"{DOMAIN}_{entry.entry_id}_update"
         self._device_info = DeviceInfo(
@@ -80,6 +85,11 @@ class ApplianceCycleManager:
                 self.door_is_open = door_state.state == STATE_ON
                 if self.door_is_open:
                     self.door_last_opened = door_state.last_changed
+        power_state = self.hass.states.get(self.power_entity)
+        if power_state and power_state.state not in ("unknown", "unavailable"):
+            power = self._power_to_w(power_state)
+            if power is not None:
+                self._last_power = power
         self._ticker_unsub = async_track_time_interval(
             self.hass, self._handle_tick, timedelta(seconds=60)
         )
@@ -118,6 +128,37 @@ class ApplianceCycleManager:
     def _cancel_start_candidate(self, *_args) -> None:
         self._cancel_on_grace_timer(from_callback=bool(_args))
         self._cancel_on_timer()
+        self._reset_start_candidate_state()
+
+    def _reset_start_candidate_state(self) -> None:
+        self._start_candidate_started = None
+        self._start_candidate_accounted_until = None
+        self._start_candidate_high_duration = 0.0
+        self._start_candidate_below_duration = 0.0
+
+    def _advance_start_candidate(self, now: datetime) -> None:
+        if (
+            self._start_candidate_started is None
+            or self._start_candidate_accounted_until is None
+            or self._last_power is None
+        ):
+            return
+        if now <= self._start_candidate_accounted_until:
+            return
+        duration = (now - self._start_candidate_accounted_until).total_seconds()
+        if duration <= 0:
+            self._start_candidate_accounted_until = now
+            return
+        if self._last_power >= self.profile["on_threshold"]:
+            self._start_candidate_high_duration += duration
+            self._start_candidate_below_duration = 0.0
+        else:
+            self._start_candidate_below_duration += duration
+            start_grace = self.profile.get("start_grace", 0)
+            if start_grace <= 0 or self._start_candidate_below_duration > start_grace:
+                self._cancel_start_candidate()
+                return
+        self._start_candidate_accounted_until = now
 
     @staticmethod
     def _power_to_w(state: State) -> float | None:
@@ -142,19 +183,44 @@ class ApplianceCycleManager:
         new_state: State | None = event.data.get("new_state")
         if new_state is None or new_state.state in ("unknown", "unavailable"):
             return
+        event_time: datetime | None = new_state.last_changed
+        if event_time is None:
+            event_time = getattr(event, "time_fired", None)
+        if event_time is None:
+            event_time = utcnow()
+        self._advance_start_candidate(event_time)
         power = self._power_to_w(new_state)
         if power is None:
             return
+        self._last_power = power
 
         if self.state == "idle":
             on_threshold = self.profile["on_threshold"]
             if power >= on_threshold:
+                if self._start_candidate_started is None:
+                    self._start_candidate_started = event_time
+                    self._start_candidate_accounted_until = event_time
+                    self._start_candidate_high_duration = 0.0
+                    self._start_candidate_below_duration = 0.0
+                elif self._start_candidate_accounted_until is None:
+                    self._start_candidate_accounted_until = event_time
+                self._start_candidate_below_duration = 0.0
                 if self._on_grace_timer:
                     self._cancel_on_grace_timer()
-                if not self._on_timer:
-                    self._on_timer = async_call_later(
-                        self.hass, self.profile["delay_on"], self._confirm_running
-                    )
+                if self._start_candidate_high_duration >= self.profile["delay_on"]:
+                    if self._on_timer:
+                        cancel = self._on_timer
+                        self._on_timer = None
+                        cancel()
+                    self._confirm_running(event_time)
+                elif not self._on_timer:
+                    remaining = self.profile["delay_on"] - self._start_candidate_high_duration
+                    if remaining <= 0:
+                        self._confirm_running(event_time)
+                    else:
+                        self._on_timer = async_call_later(
+                            self.hass, remaining, self._confirm_running
+                        )
             elif self._on_timer:
                 start_grace = self.profile.get("start_grace", 0)
                 if start_grace > 0:
@@ -211,15 +277,28 @@ class ApplianceCycleManager:
     def _confirm_running(self, _now: datetime) -> None:
         self._on_timer = None
         self._cancel_on_grace_timer()
-        power_state = self.hass.states.get(self.power_entity)
-        if not power_state:
+        if self._start_candidate_started is None:
             return
-        power = self._power_to_w(power_state)
-        if power is None or power < self.profile["on_threshold"]:
+        self._advance_start_candidate(_now)
+        if self._start_candidate_started is None:
             return
+        required = self.profile["delay_on"]
+        if self._start_candidate_high_duration < required:
+            remaining = required - self._start_candidate_high_duration
+            if remaining <= 0:
+                remaining = 1.0
+            self._on_timer = async_call_later(
+                self.hass, remaining, self._confirm_running
+            )
+            return
+        start_time = self._start_candidate_started
+        self._reset_start_candidate_state()
         self.finished_at = None
         self.state = "running"
-        self.started_at = utcnow()
+        if start_time:
+            self.started_at = start_time
+        else:
+            self.started_at = utcnow()
         self._schedule_update()
 
     @callback
