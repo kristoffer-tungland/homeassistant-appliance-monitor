@@ -20,6 +20,7 @@ DEFAULT_PROFILES = {
         "min_run": 300,
         "resume_grace": 180,
         "start_grace": 30,
+        "finish_on_door_open": True,
     },
     "dryer": {
         "on_threshold": 80.0,
@@ -30,6 +31,7 @@ DEFAULT_PROFILES = {
         "min_run": 240,
         "resume_grace": 180,
         "start_grace": 30,
+        "finish_on_door_open": True,
     },
     "dishwasher": {
         "on_threshold": 20.0,
@@ -40,5 +42,6 @@ DEFAULT_PROFILES = {
         "min_run": 600,
         "resume_grace": 240,
         "start_grace": 45,
+        "finish_on_door_open": False,
     },
 }

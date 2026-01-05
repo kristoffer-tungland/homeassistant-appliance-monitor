@@ -253,7 +253,7 @@ class ApplianceCycleManager:
         self.door_is_open = is_open
         if is_open:
             self.door_last_opened = utcnow()
-            if self.state == "running":
+            if self.state == "running" and self.profile.get("finish_on_door_open", True):
                 if self._off_timer:
                     self._off_timer()
                     self._off_timer = None

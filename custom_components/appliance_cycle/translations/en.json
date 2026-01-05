@@ -12,5 +12,22 @@
         }
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "on_threshold": "On threshold (W)",
+          "off_threshold": "Off threshold (W)",
+          "delay_on": "On delay (seconds)",
+          "start_grace": "Start grace (seconds)",
+          "delay_off": "Off delay (seconds)",
+          "quiet_end": "Quiet end (seconds)",
+          "min_run": "Minimum run time (seconds)",
+          "resume_grace": "Resume grace (seconds)",
+          "finish_on_door_open": "Finish cycle when door opens"
+        }
+      }
+    }
   }
 }
