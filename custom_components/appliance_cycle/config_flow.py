@@ -91,6 +91,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Required(
                     "resume_grace", default=profile.get("resume_grace")
                 ): int,
+                vol.Required(
+                    "finish_on_door_open",
+                    default=profile.get("finish_on_door_open", True),
+                ): bool,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)
