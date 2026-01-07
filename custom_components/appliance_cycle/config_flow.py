@@ -63,12 +63,18 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
-            self.config_entry.data["profile"].update(user_input)
-            return self.async_create_entry(title="", data={})
+            profile = DEFAULT_PROFILES[
+                self.config_entry.data[CONF_APPLIANCE_TYPE]
+            ].copy()
+            profile.update(self.config_entry.data.get("profile", {}))
+            profile.update(self.config_entry.options.get("profile", {}))
+            profile.update(user_input)
+            return self.async_create_entry(title="", data={"profile": profile})
         profile = DEFAULT_PROFILES[
             self.config_entry.data[CONF_APPLIANCE_TYPE]
         ].copy()
         profile.update(self.config_entry.data.get("profile", {}))
+        profile.update(self.config_entry.options.get("profile", {}))
         schema = vol.Schema(
             {
                 vol.Required(

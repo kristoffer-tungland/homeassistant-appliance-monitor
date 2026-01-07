@@ -35,14 +35,14 @@ class ApplianceCycleManager:
         self.appliance_type: str = data[CONF_APPLIANCE_TYPE]
         self.power_entity: str = data[CONF_POWER_SENSOR]
         self.door_entity: str | None = data.get(CONF_DOOR_SENSOR)
-        defaults = DEFAULT_PROFILES[self.appliance_type].copy()
+        profile = DEFAULT_PROFILES[self.appliance_type].copy()
         stored_profile = data.get("profile")
         if isinstance(stored_profile, dict):
-            for key, value in defaults.items():
-                stored_profile.setdefault(key, value)
-            self.profile = stored_profile
-        else:
-            self.profile = defaults
+            profile.update(stored_profile)
+        options_profile = entry.options.get("profile")
+        if isinstance(options_profile, dict):
+            profile.update(options_profile)
+        self.profile = profile
 
         self.state: str = "idle"
         self.started_at: datetime | None = None
