@@ -59,22 +59,22 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     """Options for Appliance Cycle."""
 
     def __init__(self, config_entry):
-        self.config_entry = config_entry
+        self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
             profile = DEFAULT_PROFILES[
-                self.config_entry.data[CONF_APPLIANCE_TYPE]
+                self._config_entry.data[CONF_APPLIANCE_TYPE]
             ].copy()
-            profile.update(self.config_entry.data.get("profile", {}))
-            profile.update(self.config_entry.options.get("profile", {}))
+            profile.update(self._config_entry.data.get("profile", {}))
+            profile.update(self._config_entry.options.get("profile", {}))
             profile.update(user_input)
             return self.async_create_entry(title="", data={"profile": profile})
         profile = DEFAULT_PROFILES[
-            self.config_entry.data[CONF_APPLIANCE_TYPE]
+            self._config_entry.data[CONF_APPLIANCE_TYPE]
         ].copy()
-        profile.update(self.config_entry.data.get("profile", {}))
-        profile.update(self.config_entry.options.get("profile", {}))
+        profile.update(self._config_entry.data.get("profile", {}))
+        profile.update(self._config_entry.options.get("profile", {}))
         schema = vol.Schema(
             {
                 vol.Required(
