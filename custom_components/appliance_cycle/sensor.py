@@ -17,6 +17,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         ApplianceRunTimeSensor(manager),
         ApplianceLastRuntimeSensor(manager),
         ApplianceFinishedAtSensor(manager),
+        ApplianceEnergySensor(manager),
         ApplianceStatusSensor(manager),
     ]
     async_add_entities(sensors)
@@ -79,6 +80,23 @@ class ApplianceFinishedAtSensor(ApplianceBaseSensor):
         if self.manager.finished_at_iso:
             return datetime.fromisoformat(self.manager.finished_at_iso)
         return None
+
+
+class ApplianceEnergySensor(ApplianceBaseSensor):
+    _attr_native_unit_of_measurement = "kWh"
+    _attr_device_class = SensorDeviceClass.ENERGY
+
+    def __init__(self, manager) -> None:
+        super().__init__(manager)
+        self._attr_name = f"{manager.name} Energy"
+        self._attr_unique_id = f"{manager.entry.entry_id}_energy_kwh"
+
+    @property
+    def native_value(self):
+        energy = self.manager.energy_kwh
+        if energy is None:
+            return None
+        return round(energy, 3)
 
 
 class ApplianceStatusSensor(ApplianceBaseSensor):
