@@ -62,6 +62,9 @@ class ApplianceCycleManager:
         self._start_candidate_accounted_until: datetime | None = None
         self._start_candidate_high_duration: float = 0.0
         self._start_candidate_below_duration: float = 0.0
+        self._energy_kwh_current: float = 0.0
+        self._energy_sample_time: datetime | None = None
+        self.last_energy_kwh: float | None = None
 
         self.update_signal = f"{DOMAIN}_{entry.entry_id}_update"
         self._device_info = DeviceInfo(
@@ -136,6 +139,22 @@ class ApplianceCycleManager:
         self._start_candidate_high_duration = 0.0
         self._start_candidate_below_duration = 0.0
 
+    def _update_energy(self, now: datetime) -> None:
+        if self.state != "running":
+            return
+        if self._energy_sample_time is None:
+            self._energy_sample_time = now
+            return
+        if self._last_power is None:
+            self._energy_sample_time = now
+            return
+        duration_hours = (now - self._energy_sample_time).total_seconds() / 3600
+        if duration_hours <= 0:
+            self._energy_sample_time = now
+            return
+        self._energy_kwh_current += (self._last_power / 1000) * duration_hours
+        self._energy_sample_time = now
+
     def _advance_start_candidate(self, now: datetime) -> None:
         if (
             self._start_candidate_started is None
@@ -192,6 +211,7 @@ class ApplianceCycleManager:
         power = self._power_to_w(new_state)
         if power is None:
             return
+        self._update_energy(event_time)
         self._last_power = power
 
         if self.state == "idle":
@@ -264,6 +284,8 @@ class ApplianceCycleManager:
                         self._schedule_update()
                         return
                     self.last_runtime = runtime
+                    self._update_energy(utcnow())
+                    self.last_energy_kwh = self._energy_kwh_current
                 self.state = "finished"
                 self.finished_at = utcnow()
                 async_call_later(
@@ -293,12 +315,13 @@ class ApplianceCycleManager:
             return
         start_time = self._start_candidate_started
         self._reset_start_candidate_state()
-        self.finished_at = None
         self.state = "running"
         if start_time:
             self.started_at = start_time
         else:
             self.started_at = utcnow()
+        self._energy_kwh_current = 0.0
+        self._energy_sample_time = self.started_at
         self._schedule_update()
 
     @callback
@@ -316,9 +339,11 @@ class ApplianceCycleManager:
         if runtime < self.profile["min_run"]:
             self._reset_cycle()
             return
+        self._update_energy(utcnow())
         self.state = "finished"
         self.finished_at = utcnow()
         self.last_runtime = runtime
+        self.last_energy_kwh = self._energy_kwh_current
         if not self.door_entity:
             async_call_later(
                 self.hass, self.profile["resume_grace"], self._reset_cycle
@@ -328,6 +353,7 @@ class ApplianceCycleManager:
     @callback
     def _handle_tick(self, now: datetime) -> None:
         if self.state == "running":
+            self._update_energy(now)
             self._schedule_update()
         elif self.finished_at and (
             not self.door_last_opened or self.door_last_opened < self.finished_at
@@ -339,6 +365,8 @@ class ApplianceCycleManager:
         self._cancel_start_candidate()
         self.state = "idle"
         self.started_at = None
+        self._energy_kwh_current = 0.0
+        self._energy_sample_time = None
         self._schedule_update()
 
     # Properties used by entities
@@ -351,6 +379,12 @@ class ApplianceCycleManager:
     @property
     def last_runtime_seconds(self) -> float | None:
         return self.last_runtime
+
+    @property
+    def energy_kwh(self) -> float | None:
+        if self.state == "running":
+            return self._energy_kwh_current
+        return self.last_energy_kwh
 
     @property
     def finished_at_iso(self) -> str | None:
