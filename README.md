@@ -1,6 +1,6 @@
 # Appliance Cycle
 
-Home Assistant custom integration for detecting and tracking appliance cycles (washing machine, dryer, dishwasher) using a power or energy sensor and an optional door sensor. The integration exposes a running binary sensor and helper sensors with run time, last runtime and finished timestamp, plus a friendly status display.
+Home Assistant custom integration for detecting and tracking appliance cycles (washing machine, dryer, dishwasher) using a power or energy sensor and an optional door sensor. The integration exposes a running binary sensor, helper sensors with run time/last runtime/finished timestamp/energy, plus a friendly status display with extra attributes for dashboards and automations.
 
 ## Installation
 
@@ -36,11 +36,89 @@ All detection thresholds and timings can be tuned from the integration options d
 ## Provided Entities
 
 * `binary_sensor.<name>_running`
+* `binary_sensor.<name>_door` (only when a door sensor is configured)
 * `sensor.<name>_run_time`
 * `sensor.<name>_last_runtime`
 * `sensor.<name>_finished_at`
-* `sensor.<name>_time_since_finished`
+* `sensor.<name>_energy`
 * `sensor.<name>_status`
+
+### Status Sensor Attributes
+
+The status sensor exposes extra attributes you can use in templates and Lovelace:
+
+* `run_time` (formatted string like `1h 23m`)
+* `run_time_seconds`
+* `last_runtime_seconds`
+* `started_at`
+* `finished_at`
+* `door_open`
+
+Status states are `Idle`, `Running`, `Finished`, or `Started` (a brief pre-running confirmation).
+
+## Dashboard Examples
+
+### Show run time while running
+
+Use the status sensor so the entity card displays the running time attribute, and only show it when the appliance is running.
+
+```yaml
+type: entity
+show_name: true
+show_state: true
+show_icon: true
+entity: sensor.washing_machine_status
+icon: mdi:washing-machine
+state_content: run_time
+visibility:
+  - condition: state
+    entity: binary_sensor.washing_machine_running
+    state: "on"
+name:
+  type: device
+```
+
+### Show how long it has been finished
+
+This card keeps the "Finished" state visible and highlights it.
+
+```yaml
+type: tile
+entity: sensor.washing_machine_finished_at
+features_position: bottom
+vertical: false
+name: Washing machine finished
+state_content: state
+icon: mdi:washing-machine
+color: red
+visibility:
+  - condition: state
+    entity: sensor.washing_machine_status
+    state: Finished
+```
+
+## Automation Examples
+
+### Alert when wet laundry sits too long
+
+Trigger a reminder when the status has been `Finished` for a set time. Adjust the `for` value to your preference.
+
+```yaml
+alias: Laundry reminder
+mode: single
+trigger:
+  - platform: state
+    entity_id: sensor.washing_machine_status
+    to: "Finished"
+    for: "04:00:00"
+condition: []
+action:
+  - service: notify.mobile_app_phone
+    data:
+      message: "The laundry has been finished for 4 hours. Time to move it!"
+```
+
+If you have a door sensor configured, opening the door clears the finished state so the reminder will reset automatically.
 
 ## Development
 
