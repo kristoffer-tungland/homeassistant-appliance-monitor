@@ -89,8 +89,17 @@ class ApplianceStatusSensor(ApplianceBaseSensor):
     @property
     def native_value(self):
         if self.manager.is_starting:
-            return "started"
-        return self.manager.state
+            return "Started"
+        return self.manager.state.title()
+
+    @staticmethod
+    def _format_runtime(seconds: int | None) -> str | None:
+        if seconds is None:
+            return None
+        total_seconds = max(int(seconds), 0)
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+        return f"{hours}h {minutes}m"
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -108,5 +117,6 @@ class ApplianceStatusSensor(ApplianceBaseSensor):
             ),
             "door_open": self.manager.door_open,
             "run_time_seconds": self.manager.run_time_seconds,
+            "run_time": self._format_runtime(self.manager.run_time_seconds),
             "last_runtime_seconds": self.manager.last_runtime_seconds,
         }
