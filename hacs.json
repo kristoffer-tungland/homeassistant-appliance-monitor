@@ -2,5 +2,5 @@
   "name": "Appliance Cycle",
   "country": ["all"],
   "domains": ["appliance_cycle"],
-  "homeassistant": "2023.0.0"
+  "homeassistant": "2023.1.0"
 }
