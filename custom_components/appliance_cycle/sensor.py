@@ -8,6 +8,7 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from . import _get_entry_data
+from .const import APPLIANCE_TYPE_ICONS
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -85,6 +86,9 @@ class ApplianceStatusSensor(ApplianceBaseSensor):
         super().__init__(manager)
         self._attr_name = f"{manager.name} Status"
         self._attr_unique_id = f"{manager.entry.entry_id}_status"
+        self._attr_icon = APPLIANCE_TYPE_ICONS.get(
+            manager.appliance_type, "mdi:home"
+        )
 
     @property
     def native_value(self):

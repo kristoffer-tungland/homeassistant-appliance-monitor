@@ -10,6 +10,12 @@ CONF_APPLIANCE_TYPE = "appliance_type"
 
 APPLIANCE_TYPES = ["washer", "dryer", "dishwasher"]
 
+APPLIANCE_TYPE_ICONS = {
+    "washer": "mdi:washing-machine",
+    "dryer": "mdi:tumble-dryer",
+    "dishwasher": "mdi:dishwasher",
+}
+
 DEFAULT_PROFILES = {
     "washer": {
         "on_threshold": 15.0,
