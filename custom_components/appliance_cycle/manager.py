@@ -369,12 +369,8 @@ class ApplianceCycleManager:
         return None
 
     @property
-    def time_since_finished_seconds(self) -> float:
-        if not self.finished_at:
-            return 0.0
-        if self.door_last_opened and self.door_last_opened >= self.finished_at:
-            return 0.0
-        return (utcnow() - self.finished_at).total_seconds()
+    def is_starting(self) -> bool:
+        return self.state == "idle" and self._start_candidate_started is not None
 
     @property
     def device_info(self) -> DeviceInfo:
