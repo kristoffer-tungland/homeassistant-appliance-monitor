@@ -48,24 +48,6 @@ class ApplianceRunningBinarySensor(ApplianceBaseBinarySensor):
     def is_on(self) -> bool:
         return self.manager.state == "running"
 
-    @property
-    def extra_state_attributes(self) -> dict:
-        return {
-            "appliance_type": self.manager.appliance_type,
-            "started_at": (
-                self.manager.started_at.isoformat()
-                if self.manager.started_at
-                else None
-            ),
-            "finished_at": (
-                self.manager.finished_at.isoformat()
-                if self.manager.finished_at
-                else None
-            ),
-            "run_time_seconds": self.manager.run_time_seconds,
-            "last_runtime_seconds": self.manager.last_runtime_seconds,
-        }
-
 
 class ApplianceDoorBinarySensor(ApplianceBaseBinarySensor):
     """Indicates if the appliance door is open."""

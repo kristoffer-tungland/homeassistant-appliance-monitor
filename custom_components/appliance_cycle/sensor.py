@@ -16,7 +16,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
         ApplianceRunTimeSensor(manager),
         ApplianceLastRuntimeSensor(manager),
         ApplianceFinishedAtSensor(manager),
-        ApplianceTimeSinceFinishedSensor(manager),
         ApplianceStatusSensor(manager),
     ]
     async_add_entities(sensors)
@@ -81,20 +80,6 @@ class ApplianceFinishedAtSensor(ApplianceBaseSensor):
         return None
 
 
-class ApplianceTimeSinceFinishedSensor(ApplianceBaseSensor):
-    _attr_native_unit_of_measurement = "s"
-    _attr_device_class = SensorDeviceClass.DURATION
-
-    def __init__(self, manager) -> None:
-        super().__init__(manager)
-        self._attr_name = f"{manager.name} Time Since Finished"
-        self._attr_unique_id = f"{manager.entry.entry_id}_time_since_finished"
-
-    @property
-    def native_value(self):
-        return int(self.manager.time_since_finished_seconds)
-
-
 class ApplianceStatusSensor(ApplianceBaseSensor):
     def __init__(self, manager) -> None:
         super().__init__(manager)
@@ -103,16 +88,25 @@ class ApplianceStatusSensor(ApplianceBaseSensor):
 
     @property
     def native_value(self):
-        state = self.manager.state
-        if self.manager.door_open:
-            return "Open"
-        if state == "running":
-            seconds = int(self.manager.run_time_seconds)
-            mins, secs = divmod(seconds, 60)
-            hours, mins = divmod(mins, 60)
-            if hours:
-                return f"{hours}h {mins:02d}m"
-            return f"{mins}m"
-        if state == "finished":
-            return "Finished"
-        return "Idle"
+        if self.manager.is_starting:
+            return "started"
+        return self.manager.state
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {
+            "appliance_type": self.manager.appliance_type,
+            "started_at": (
+                self.manager.started_at.isoformat()
+                if self.manager.started_at
+                else None
+            ),
+            "finished_at": (
+                self.manager.finished_at.isoformat()
+                if self.manager.finished_at
+                else None
+            ),
+            "door_open": self.manager.door_open,
+            "run_time_seconds": self.manager.run_time_seconds,
+            "last_runtime_seconds": self.manager.last_runtime_seconds,
+        }
