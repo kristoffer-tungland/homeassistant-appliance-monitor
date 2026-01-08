@@ -39,7 +39,7 @@ class ApplianceBaseSensor(SensorEntity):
 
 
 class ApplianceRunTimeSensor(ApplianceBaseSensor):
-    _attr_native_unit_of_measurement = "s"
+    _attr_native_unit_of_measurement = "min"
     _attr_device_class = SensorDeviceClass.DURATION
 
     def __init__(self, manager) -> None:
@@ -49,11 +49,11 @@ class ApplianceRunTimeSensor(ApplianceBaseSensor):
 
     @property
     def native_value(self):
-        return int(self.manager.run_time_seconds)
+        return self.manager.run_time_seconds / 60
 
 
 class ApplianceLastRuntimeSensor(ApplianceBaseSensor):
-    _attr_native_unit_of_measurement = "s"
+    _attr_native_unit_of_measurement = "min"
     _attr_device_class = SensorDeviceClass.DURATION
 
     def __init__(self, manager) -> None:
@@ -63,7 +63,7 @@ class ApplianceLastRuntimeSensor(ApplianceBaseSensor):
 
     @property
     def native_value(self):
-        return int(self.manager.last_runtime_seconds or 0)
+        return (self.manager.last_runtime_seconds or 0) / 60
 
 
 class ApplianceFinishedAtSensor(ApplianceBaseSensor):
@@ -82,7 +82,7 @@ class ApplianceFinishedAtSensor(ApplianceBaseSensor):
 
 
 class ApplianceTimeSinceFinishedSensor(ApplianceBaseSensor):
-    _attr_native_unit_of_measurement = "s"
+    _attr_native_unit_of_measurement = "min"
     _attr_device_class = SensorDeviceClass.DURATION
 
     def __init__(self, manager) -> None:
@@ -92,7 +92,7 @@ class ApplianceTimeSinceFinishedSensor(ApplianceBaseSensor):
 
     @property
     def native_value(self):
-        return int(self.manager.time_since_finished_seconds)
+        return self.manager.time_since_finished_seconds / 60
 
 
 class ApplianceStatusSensor(ApplianceBaseSensor):
