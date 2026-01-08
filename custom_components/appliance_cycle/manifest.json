@@ -3,6 +3,7 @@
   "name": "Appliance Cycle",
   "version": "0.0.21",
   "documentation": "https://github.com/kristoffer-tungland/homeassistant-appliance-monitor",
+  "homeassistant": "2023.1.0",
   "requirements": [],
   "dependencies": [],
   "codeowners": [
