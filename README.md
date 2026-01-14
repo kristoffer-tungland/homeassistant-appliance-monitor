@@ -123,3 +123,8 @@ If you have a door sensor configured, opening the door clears the finished state
 ## Development
 
 This repository follows [semantic versioning](https://semver.org/). Pull requests and issues are welcome!
+
+### Releases
+
+* Merges to `main` trigger the stable release workflow, which bumps the patch version and publishes a GitHub release from the latest stable tag.
+* Merges to `develop` trigger prereleases with `X.Y.Z-beta.N` tags based on the next stable patch version.
