@@ -17,6 +17,7 @@
     "step": {
       "init": {
         "data": {
+          "door_sensor": "Door sensor",
           "on_threshold": "On threshold (W)",
           "off_threshold": "Off threshold (W)",
           "delay_on": "On delay (seconds)",

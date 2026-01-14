@@ -31,10 +31,13 @@ class ApplianceCycleManager:
         self.hass = hass
         self.entry = entry
         data = entry.data
+        options = entry.options
         self.name: str = entry.title
         self.appliance_type: str = data[CONF_APPLIANCE_TYPE]
         self.power_entity: str = data[CONF_POWER_SENSOR]
-        self.door_entity: str | None = data.get(CONF_DOOR_SENSOR)
+        self.door_entity: str | None = options.get(
+            CONF_DOOR_SENSOR, data.get(CONF_DOOR_SENSOR)
+        )
         profile = DEFAULT_PROFILES[self.appliance_type].copy()
         stored_profile = data.get("profile")
         if isinstance(stored_profile, dict):

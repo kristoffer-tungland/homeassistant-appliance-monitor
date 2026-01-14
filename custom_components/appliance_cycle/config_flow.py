@@ -60,20 +60,29 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
+            door_sensor = user_input.pop(CONF_DOOR_SENSOR, None)
             profile = DEFAULT_PROFILES[
                 self.config_entry.data[CONF_APPLIANCE_TYPE]
             ].copy()
             profile.update(self.config_entry.data.get("profile", {}))
             profile.update(self.config_entry.options.get("profile", {}))
             profile.update(user_input)
-            return self.async_create_entry(title="", data={"profile": profile})
+            return self.async_create_entry(
+                title="", data={"profile": profile, CONF_DOOR_SENSOR: door_sensor}
+            )
         profile = DEFAULT_PROFILES[
             self.config_entry.data[CONF_APPLIANCE_TYPE]
         ].copy()
         profile.update(self.config_entry.data.get("profile", {}))
         profile.update(self.config_entry.options.get("profile", {}))
+        door_sensor = self.config_entry.options.get(
+            CONF_DOOR_SENSOR, self.config_entry.data.get(CONF_DOOR_SENSOR)
+        )
         schema = vol.Schema(
             {
+                vol.Optional(CONF_DOOR_SENSOR, default=door_sensor): selector(
+                    {"entity": {"domain": ["binary_sensor"]}}
+                ),
                 vol.Required(
                     "on_threshold", default=profile.get("on_threshold")
                 ): vol.Coerce(float),
