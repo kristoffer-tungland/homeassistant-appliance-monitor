@@ -1,16 +1,19 @@
-name: Release
+name: Prerelease (develop)
 
 on:
   pull_request_target:
-    branches: [ main ]
+    branches: [ develop ]
     types: [ closed ]
 
-# Ensure the workflow can push commits and create releases
 permissions:
   contents: write
 
+concurrency:
+  group: prerelease-develop
+  cancel-in-progress: false
+
 jobs:
-  release:
+  prerelease:
     if: github.actor != 'github-actions[bot]' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
@@ -22,12 +25,13 @@ jobs:
           ref: ${{ github.event.pull_request.base.ref }}
           persist-credentials: false
 
-      - name: Determine next version
+      - name: Determine next prerelease version
         id: next_version
         uses: actions/github-script@v7
         with:
           script: |
             const { owner, repo } = context.repo;
+
             const releases = await github.paginate(github.rest.repos.listReleases, {
               owner,
               repo,
@@ -42,20 +46,42 @@ jobs:
                 /^v(\d+)\.(\d+)\.(\d+)$/.test(release.tag_name)
             );
 
-            let newTag;
+            let baseTag;
             if (!stable) {
-              newTag = 'v0.0.1';
+              baseTag = 'v0.0.1';
             } else {
-              const tag = stable.tag_name;
-              const match = tag.match(/^v(\d+)\.(\d+)\.(\d+)$/);
-              const [major, minor, patch] = match.slice(1).map(Number);
-              newTag = `v${major}.${minor}.${patch + 1}`;
+              const [, major, minor, patch] = stable.tag_name.match(/^v(\d+)\.(\d+)\.(\d+)$/);
+              baseTag = `v${major}.${minor}.${Number(patch) + 1}`;
             }
 
-            core.setOutput('tag', newTag);
-            core.setOutput('version', newTag.slice(1));
+            const baseVersion = baseTag.slice(1);
 
-      - name: Update manifest version
+            const cp = require('child_process');
+            const pattern = `v${baseVersion}-beta.*`;
+            const tagsRaw = cp.execSync(`git tag -l "${pattern}"`).toString().trim();
+            const tags = tagsRaw
+              ? tagsRaw
+                  .split('\n')
+                  .map((value) => value.trim())
+                  .filter(Boolean)
+              : [];
+
+            let maxN = 0;
+            for (const tag of tags) {
+              const match = tag.match(new RegExp(`^v${baseVersion}-beta\\.(\\d+)$`));
+              if (match) {
+                maxN = Math.max(maxN, Number(match[1]));
+              }
+            }
+
+            const nextN = maxN + 1;
+            const prereleaseTag = `v${baseVersion}-beta.${nextN}`;
+
+            core.setOutput('base_tag', baseTag);
+            core.setOutput('tag', prereleaseTag);
+            core.setOutput('version', prereleaseTag.slice(1));
+
+      - name: Update manifest version (prerelease)
         run: |
           python <<'PY'
           import json
@@ -66,7 +92,8 @@ jobs:
           p.write_text(json.dumps(data, indent=2) + '\n')
           PY
 
-      - name: Commit & push manifest update
+      - name: Commit & push manifest update to develop
+        id: push_commit
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -79,23 +106,23 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: bump manifest version to ${{ steps.next_version.outputs.version }}"
+          git commit -m "chore: prerelease ${{ steps.next_version.outputs.version }}"
 
-          # Re-auth with a token that has write access
           git remote set-url origin \
             https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
 
-          # Push to the base branch (main) that the PR targeted
           git push origin HEAD:${{ github.event.pull_request.base.ref }}
 
-      - name: Create release (auto notes)
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Create prerelease (auto notes)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.next_version.outputs.tag }}
           name: ${{ steps.next_version.outputs.tag }}
-          target_commitish: ${{ github.event.pull_request.merge_commit_sha }}
+          target_commitish: ${{ steps.push_commit.outputs.sha }}
           generate_release_notes: true
           draft: false
-          prerelease: false
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

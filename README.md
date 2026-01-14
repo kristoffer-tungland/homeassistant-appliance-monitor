@@ -28,7 +28,8 @@ Default detection thresholds are applied for each appliance type and can be adju
 
 ### Options
 
-All detection thresholds and timings can be tuned from the integration options dialog:
+Use the integration options dialog to update the door sensor or tune detection thresholds
+and timings:
 
 * **Delay on / Delay off / Quiet end / Minimum run / Resume grace** – control how long the integration waits to confirm that an appliance has started or finished.
 * **Start grace** – number of seconds that brief dips below the on-threshold are ignored while confirming a start, helping catch appliances that momentarily idle before the cycle fully begins.
@@ -123,3 +124,8 @@ If you have a door sensor configured, opening the door clears the finished state
 ## Development
 
 This repository follows [semantic versioning](https://semver.org/). Pull requests and issues are welcome!
+
+### Releases
+
+* Merges to `main` trigger the stable release workflow, which bumps the patch version and publishes a GitHub release from the latest stable tag.
+* Merges to `develop` trigger prereleases with `X.Y.Z-beta.N` tags based on the next stable patch version.
