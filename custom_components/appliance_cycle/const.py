@@ -6,6 +6,7 @@ DOMAIN = "appliance_cycle"
 
 CONF_POWER_SENSOR = "power_sensor"
 CONF_DOOR_SENSOR = "door_sensor"
+CONF_DOOR_CLOSED_PULSE_TOGGLES = "door_closed_pulse_toggles"
 CONF_APPLIANCE_TYPE = "appliance_type"
 
 APPLIANCE_TYPES = ["washer", "dryer", "dishwasher"]

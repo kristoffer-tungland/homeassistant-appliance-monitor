@@ -18,6 +18,7 @@
       "init": {
         "data": {
           "door_sensor": "Door sensor",
+          "door_closed_pulse_toggles": "Toggle door open on closed pulses",
           "on_threshold": "On threshold (W)",
           "off_threshold": "Off threshold (W)",
           "delay_on": "On delay (seconds)",

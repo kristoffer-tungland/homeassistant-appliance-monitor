@@ -33,6 +33,7 @@ and timings:
 
 * **Delay on / Delay off / Quiet end / Minimum run / Resume grace** – control how long the integration waits to confirm that an appliance has started or finished.
 * **Start grace** – number of seconds that brief dips below the on-threshold are ignored while confirming a start, helping catch appliances that momentarily idle before the cycle fully begins.
+* **Toggle door open on closed pulses** – use when a door sensor reports brief "closed" pulses while opening/closing; each closed pulse toggles between open/closed, and the door resets to closed when a cycle starts.
 
 ## Provided Entities
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from homeassistant.const import STATE_ON
+from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant, callback, Event, State
 from homeassistant.helpers.event import (
     async_call_later,
@@ -17,6 +17,7 @@ from homeassistant.util.dt import utcnow
 
 from .const import (
     CONF_APPLIANCE_TYPE,
+    CONF_DOOR_CLOSED_PULSE_TOGGLES,
     CONF_DOOR_SENSOR,
     CONF_POWER_SENSOR,
     DEFAULT_PROFILES,
@@ -37,6 +38,9 @@ class ApplianceCycleManager:
         self.power_entity: str = data[CONF_POWER_SENSOR]
         self.door_entity: str | None = options.get(
             CONF_DOOR_SENSOR, data.get(CONF_DOOR_SENSOR)
+        )
+        self.door_closed_pulse_toggles: bool = options.get(
+            CONF_DOOR_CLOSED_PULSE_TOGGLES, False
         )
         profile = DEFAULT_PROFILES[self.appliance_type].copy()
         stored_profile = data.get("profile")
@@ -86,11 +90,14 @@ class ApplianceCycleManager:
             self._door_unsub = async_track_state_change_event(
                 self.hass, [self.door_entity], self._door_changed
             )
-            door_state = self.hass.states.get(self.door_entity)
-            if door_state and door_state.state not in ("unknown", "unavailable"):
-                self.door_is_open = door_state.state == STATE_ON
-                if self.door_is_open:
-                    self.door_last_opened = door_state.last_changed
+            if self.door_closed_pulse_toggles:
+                self.door_is_open = False
+            else:
+                door_state = self.hass.states.get(self.door_entity)
+                if door_state and door_state.state not in ("unknown", "unavailable"):
+                    self.door_is_open = door_state.state == STATE_ON
+                    if self.door_is_open:
+                        self.door_last_opened = door_state.last_changed
         power_state = self.hass.states.get(self.power_entity)
         if power_state and power_state.state not in ("unknown", "unavailable"):
             power = self._power_to_w(power_state)
@@ -272,7 +279,12 @@ class ApplianceCycleManager:
         new_state: State | None = event.data.get("new_state")
         if new_state is None or new_state.state in ("unknown", "unavailable"):
             return
-        is_open = new_state.state == STATE_ON
+        if self.door_closed_pulse_toggles:
+            if new_state.state != STATE_OFF:
+                return
+            is_open = not bool(self.door_is_open)
+        else:
+            is_open = new_state.state == STATE_ON
         self.door_is_open = is_open
         if is_open:
             self.door_last_opened = utcnow()
@@ -323,6 +335,8 @@ class ApplianceCycleManager:
             self.started_at = start_time
         else:
             self.started_at = utcnow()
+        if self.door_closed_pulse_toggles and self.door_entity:
+            self.door_is_open = False
         self._energy_kwh_current = 0.0
         self._energy_sample_time = self.started_at
         self._schedule_update()
