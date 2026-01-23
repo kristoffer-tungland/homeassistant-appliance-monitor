@@ -11,6 +11,7 @@ from homeassistant.helpers.selector import selector
 from .const import (
     APPLIANCE_TYPES,
     CONF_APPLIANCE_TYPE,
+    CONF_DOOR_CLOSED_PULSE_TOGGLES,
     CONF_DOOR_SENSOR,
     CONF_POWER_SENSOR,
     DEFAULT_PROFILES,
@@ -61,6 +62,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
         if user_input is not None:
             door_sensor = user_input.pop(CONF_DOOR_SENSOR, None)
+            door_closed_pulse_toggles = user_input.pop(
+                CONF_DOOR_CLOSED_PULSE_TOGGLES, False
+            )
             profile = DEFAULT_PROFILES[
                 self.config_entry.data[CONF_APPLIANCE_TYPE]
             ].copy()
@@ -68,7 +72,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             profile.update(self.config_entry.options.get("profile", {}))
             profile.update(user_input)
             return self.async_create_entry(
-                title="", data={"profile": profile, CONF_DOOR_SENSOR: door_sensor}
+                title="",
+                data={
+                    "profile": profile,
+                    CONF_DOOR_SENSOR: door_sensor,
+                    CONF_DOOR_CLOSED_PULSE_TOGGLES: door_closed_pulse_toggles,
+                },
             )
         profile = DEFAULT_PROFILES[
             self.config_entry.data[CONF_APPLIANCE_TYPE]
@@ -78,11 +87,18 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         door_sensor = self.config_entry.options.get(
             CONF_DOOR_SENSOR, self.config_entry.data.get(CONF_DOOR_SENSOR)
         )
+        door_closed_pulse_toggles = self.config_entry.options.get(
+            CONF_DOOR_CLOSED_PULSE_TOGGLES, False
+        )
         schema = vol.Schema(
             {
                 vol.Optional(CONF_DOOR_SENSOR, default=door_sensor): selector(
                     {"entity": {"domain": ["binary_sensor"]}}
                 ),
+                vol.Required(
+                    CONF_DOOR_CLOSED_PULSE_TOGGLES,
+                    default=door_closed_pulse_toggles,
+                ): bool,
                 vol.Required(
                     "on_threshold", default=profile.get("on_threshold")
                 ): vol.Coerce(float),
