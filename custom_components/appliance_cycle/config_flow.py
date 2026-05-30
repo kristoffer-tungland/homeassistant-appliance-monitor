@@ -78,9 +78,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         door_sensor = self.config_entry.options.get(
             CONF_DOOR_SENSOR, self.config_entry.data.get(CONF_DOOR_SENSOR)
         )
+        door_sensor_option = (
+            vol.Optional(CONF_DOOR_SENSOR, default=door_sensor)
+            if door_sensor is not None
+            else vol.Optional(CONF_DOOR_SENSOR)
+        )
         schema = vol.Schema(
             {
-                vol.Optional(CONF_DOOR_SENSOR, default=door_sensor): selector(
+                door_sensor_option: selector(
                     {"entity": {"domain": ["binary_sensor"]}}
                 ),
                 vol.Required(
