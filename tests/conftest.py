@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 from datetime import datetime, timezone
 import sys
 import types
@@ -9,6 +10,8 @@ import types
 
 def _install_homeassistant_stubs() -> None:
     if "homeassistant" in sys.modules:
+        return
+    if importlib.util.find_spec("homeassistant") is not None:
         return
 
     homeassistant = types.ModuleType("homeassistant")
