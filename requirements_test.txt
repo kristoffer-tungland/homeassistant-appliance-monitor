@@ -1,0 +1,2 @@
+pytest>=8.0.0
+voluptuous>=0.13.1
